@@ -17,26 +17,32 @@ fn parse_string(string: String) -> Result<Vec<u32>, std::num::ParseIntError> {
         .collect()
 }
 
-fn compare_numbers(a: &u32, b: &u32) -> bool {
-    let result = a + b;
-    result == 2020
+
+fn recurse_numbers(current_numbers: &Vec<u32>, rest_numbers: &Vec<u32>, max_depth: usize) -> Option<Vec<u32>> {
+    if current_numbers.len() < max_depth {
+        let mut new_rest_numbers = rest_numbers.to_vec();
+        loop  {
+            if new_rest_numbers.is_empty() {
+                return None
+            }
+
+            let (first_value, rest) = new_rest_numbers.split_at(1);
+            let mut new_current_numbers = current_numbers.to_vec();
+            new_current_numbers.extend_from_slice(&first_value);
+
+            new_rest_numbers = rest.to_vec();
+            if let Some(result) = recurse_numbers(&new_current_numbers, &new_rest_numbers, max_depth) {
+                return Some(result)
+            }
+        }
+    } else {
+        if current_numbers.iter().sum::<u32>() == 2020 {
+            return Some(current_numbers.to_vec())
+        }
+        None
+    }
 }
 
-fn iterate_numbers(number: &u32, elements: &[u32]) -> (bool, u32, u32) {
-    let mut pair_found = false;
-    let mut a: u32 = 0;
-    let mut b: u32 = 0;
-    for entry in elements {
-        let is_equal = compare_numbers(number, entry);
-        if is_equal {
-            pair_found = true;
-            a = *number;
-            b = *entry;
-            break;
-        }
-    }
-    (pair_found, a, b)
-}
 
 fn main() {
     let input = read_file(PATH)
@@ -45,14 +51,8 @@ fn main() {
     let input = parse_string(input)
         .expect("Error parsing string to number");
 
-    let mut tuple = input.split_first();
-    while let Some((first, elements)) = tuple {
-        let (pair_found, a, b) = iterate_numbers(first, &elements);
-        if pair_found {
-            println!("a: {:?} b: {:?}", a,b);
-            println!("result: {:?}", a * b);
-            break
-        }
-        tuple = elements.split_first();
+    let initial_numbers: Vec<u32> = Vec::new();
+    if let Some(result) = recurse_numbers(&initial_numbers, &input, 3) {
+        println!("{:?}.product() = {:?}", result, result.iter().product::<u32>());
     }
 }
