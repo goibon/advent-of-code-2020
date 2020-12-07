@@ -1,3 +1,4 @@
+use std::env;
 use std::fs::File;
 use std::io::Read;
 
@@ -7,8 +8,6 @@ fn read_file(file_path: &str) -> std::io::Result<String> {
     file.read_to_string(&mut string)?;
     Ok(string)
 }
-
-const PATH: &str = "input";
 
 fn parse_string(string: String) -> Result<Vec<u32>, std::num::ParseIntError> {
     string
@@ -45,14 +44,17 @@ fn recurse_numbers(current_numbers: &Vec<u32>, rest_numbers: &Vec<u32>, max_dept
 
 
 fn main() {
-    let input = read_file(PATH)
+    let args: Vec<String> = env::args().collect();
+    let path = &args[1];
+    let max_depth = &args[2].parse::<usize>().expect("Error parsing arg");
+    let input = read_file(path)
         .expect("Error reading file.");
 
     let input = parse_string(input)
         .expect("Error parsing string to number");
 
     let initial_numbers: Vec<u32> = Vec::new();
-    if let Some(result) = recurse_numbers(&initial_numbers, &input, 3) {
+    if let Some(result) = recurse_numbers(&initial_numbers, &input, *max_depth) {
         println!("{:?}.product() = {:?}", result, result.iter().product::<u32>());
     }
 }
