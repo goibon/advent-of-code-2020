@@ -4,8 +4,6 @@ use std::io::Read;
 
 const START_X: usize = 0;
 const START_Y: usize = 0;
-const MOVE_X: usize = 3;
-const MOVE_Y: usize = 1;
 const TREE_CHARACTER: char = '#';
 
 fn read_file(file_path: &str) -> std::io::Result<String> {
@@ -38,18 +36,18 @@ fn move_tobaggo(start_x: usize, start_y: usize, move_x: usize, move_y: usize, ma
     }
 }
 
-fn count_trees(map: &Vec<&str>) -> u8 {
+fn count_trees(move_x: usize, move_y: usize, map: &Vec<&str>) -> u8 {
     let mut count: u8 = 0;
-    let mut move_result = move_tobaggo(START_X, START_Y, MOVE_X, MOVE_Y, map);
+    let mut move_result = move_tobaggo(START_X, START_Y, move_x, move_y, map);
 
     while let Some((new_x, new_y, tree_hit)) = move_result {
         if tree_hit {
             count += 1;
         }
-        if new_y + MOVE_Y >= map.len() {
+        if new_y + move_y >= map.len() {
             break
         }
-        move_result = move_tobaggo(new_x, new_y, MOVE_X, MOVE_Y, map);
+        move_result = move_tobaggo(new_x, new_y, move_x, move_y, map);
     }
     count
 }
@@ -61,6 +59,6 @@ fn main() {
     let input = read_file(path)
         .expect("Error reading file.");
     let input = split_string(&input);
-    let result = count_trees(&input);
+    let result = count_trees(3, 1, &input);
     println!("Result: {:?}", result);
 }
