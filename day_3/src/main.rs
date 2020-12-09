@@ -59,6 +59,20 @@ fn main() {
     let input = read_file(path)
         .expect("Error reading file.");
     let input = split_string(&input);
-    let result = count_trees(3, 1, &input);
-    println!("Result: {:?}", result);
+
+    let slopes: Vec<(usize, usize)> = vec![
+        (1, 1),
+        (3, 1),
+        (5, 1),
+        (7, 1),
+        (1, 2)
+    ];
+
+    let mut result: Vec<u32> = Vec::new();
+    for slope in slopes {
+        let count = count_trees(slope.0, slope.1, &input);
+        result.push(count.into());
+    }
+
+    println!("Result: {:?}", result.iter().product::<u32>());
 }
