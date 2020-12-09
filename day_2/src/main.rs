@@ -19,7 +19,9 @@ fn split_string(string: String) -> Option<Vec<String>> {
 
 #[derive(Debug)]
 struct PasswordInfo {
+    // In part 2 this is the first index
     min_occurence: usize,
+    // In part 2 this is the second index
     max_occurence: usize,
     character: char
 }
@@ -47,7 +49,7 @@ fn iterate_lines(lines: &Vec<String>) -> Vec<(usize, usize, char, &str)> {
         };
         let password = split_string[3];
 
-        if test_password(&password_info, password) {
+        if test_password_part_2(&password_info, password) {
             valid_passwords.push((password_info.min_occurence, password_info.max_occurence, password_info.character, password));
         }
     }
@@ -61,6 +63,17 @@ fn test_password(password_info: &PasswordInfo, password: &str) -> bool {
         .filter(|&char| char == password_info.character)
         .count();
     char_count >= password_info.min_occurence && char_count <= password_info.max_occurence
+}
+
+fn test_password_part_2(password_info: &PasswordInfo, password: &str) -> bool {
+    let chars: Vec<char> = password
+        .chars()
+        .collect();
+
+    let first_character = chars[password_info.min_occurence-1];
+    let second_character = chars[password_info.max_occurence-1];
+
+    return first_character != second_character && (first_character == password_info.character || second_character == password_info.character)
 }
 
 fn main() {
