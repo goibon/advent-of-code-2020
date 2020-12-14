@@ -135,6 +135,38 @@ fn find_highest_seat_id(input: &Vec<&str>) -> u32 {
     highest_seat_id
 }
 
+fn find_missing_seat_id(input: &Vec<&str>) -> u32 {
+    let mut seat_ids: Vec<u32> = input
+        .iter()
+        .map(|entry| {
+            let (row, column) = find_row_and_column_strings(entry);
+            let row = find_column_or_row(row, 0);
+            let column = find_column_or_row(column, 0);
+            let seat_id = calculate_seat_id(row, column);
+            seat_id
+        })
+        .collect();
+    seat_ids.sort();
+
+    let mut result: u32 = 0;
+    for index in 1..seat_ids.len()-1 {
+        let previous = seat_ids[index-1];
+        let current = seat_ids[index];
+        let next = seat_ids[index+1];
+
+        if previous + 1 == current && next - 1 == current {
+            continue
+        } else {
+            let a = current - previous - 1;
+            let b = next - current - 1;
+            result = if a > b {current - a} else {current + b};
+            break
+        }
+    }
+
+    result
+}
+
 fn main() -> Result<(), std::io::Error> {
     let args: Vec<String> = env::args().collect();
     let path = &args[1];
@@ -142,7 +174,8 @@ fn main() -> Result<(), std::io::Error> {
     let input = read_file(path)?;
     let input = split_input(&input);
 
-    println!("{:?}", find_highest_seat_id(&input));
+    println!("Highest seat id: {:?}", find_highest_seat_id(&input));
+    println!("Missing seat id: {:?}", find_missing_seat_id(&input));
 
     Ok(())
 }
