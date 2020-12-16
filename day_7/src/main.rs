@@ -78,6 +78,17 @@ fn count_bags_that_can_contain(target_bag: &str, bags_map: &HashMap<&str, Vec<Ba
     count
 }
 
+fn recurse_bags(initial_bag: &Bag, bags_map: &HashMap<&str, Vec<Bag>>) -> u32 {
+    let bags_in_initial = &bags_map[initial_bag.bag_type];
+    let mut count: u32 = 1;
+
+    for bag in bags_in_initial {
+        count += recurse_bags(&bag, bags_map);
+    }
+
+    count * initial_bag.amount
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let path = &args[1];
@@ -92,7 +103,9 @@ fn main() {
     }
 
     let part_1 = count_bags_that_can_contain("shiny gold", &bags);
-    println!("{:?}", part_1);
+    println!("part 1: {:?}", part_1);
+    let part_2 = recurse_bags(&Bag{bag_type: "shiny gold", amount: 1}, &bags) - 1;
+    println!("part 2: {:?}", part_2);
 }
 
 #[test]
@@ -116,4 +129,23 @@ fn test_can_bag_contain() {
     assert_eq!(can_bag_contain("muted yellow", "shiny gold", &test_map), true);
     assert_eq!(can_bag_contain("dark orange", "shiny gold", &test_map), true);
     assert_eq!(can_bag_contain("light red", "shiny gold", &test_map), true);
+}
+
+#[test]
+fn test_recurse_bags() {
+    let mut test_map: HashMap<&str, Vec<Bag>> = HashMap::new();
+     test_map.insert("light red", vec![Bag{bag_type: "bright white", amount: 1}, Bag{bag_type: "muted yellow", amount: 2}]);
+    test_map.insert("dark orange", vec![Bag{bag_type: "bright white", amount: 3}, Bag{bag_type: "muted yellow", amount: 4}]);
+    test_map.insert("bright white", vec![Bag{bag_type: "shiny gold", amount: 1}]);
+    test_map.insert("muted yellow", vec![Bag{bag_type: "shiny gold", amount: 2}, Bag{bag_type: "faded blue", amount: 9}]);
+    test_map.insert("shiny gold", vec![Bag{bag_type: "dark olive", amount: 1}, Bag{bag_type: "vibrant plum", amount: 2}]);
+    test_map.insert("dark olive", vec![Bag{bag_type: "faded blue", amount: 3}, Bag{bag_type: "dotted black", amount: 4}]);
+    test_map.insert("vibrant plum", vec![Bag{bag_type: "faded blue", amount: 5}, Bag{bag_type: "dotted black", amount: 6}]);
+    test_map.insert("faded blue", vec![]);
+    test_map.insert("dotted black", vec![]);
+
+    assert_eq!(recurse_bags(&Bag{bag_type: "faded blue", amount: 1}, &test_map), 1);
+    assert_eq!(recurse_bags(&Bag{bag_type: "faded blue", amount: 2}, &test_map), 2);
+    assert_eq!(recurse_bags(&Bag{bag_type: "vibrant plum", amount: 1}, &test_map), 12);
+    assert_eq!(recurse_bags(&Bag{bag_type: "vibrant plum", amount: 2}, &test_map), 24);
 }
