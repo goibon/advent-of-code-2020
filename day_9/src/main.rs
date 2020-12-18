@@ -69,6 +69,53 @@ fn find_invalid_number(numbers: &Vec<u64>, preamble_length: usize) -> Option<u64
     None
 }
 
+fn find_smallest_and_large_number(list: &Vec<u64>) -> Option<(u64, u64)> {
+    if list.len() < 2 {
+        None
+    } else {
+        let mut list = list.clone();
+        list.sort();
+        Some((list[0], list[list.len() - 1]))
+    }
+}
+
+fn find_contiguous_numbers_that_sum_to(target: u64, list: &Vec<u64>) -> Option<Vec<u64>> {
+    if list.len() < 2 {
+        return None
+    }
+    let mut contiguous_list: Vec<u64> = Vec::new();
+    let mut start_index: usize = 0;
+
+    let found_list = 'outer: loop {
+        if start_index >= list.len() - 1 {
+            break false
+        }
+
+        contiguous_list = Vec::new();
+        let mut temp_result: u64 = 0;
+
+        for index in start_index..list.len() {
+            let number = list[index];
+            temp_result += number;
+            contiguous_list.push(number);
+
+            if temp_result == target && contiguous_list.len() >= 2 {
+                break 'outer true
+            } else if temp_result > target {
+                break
+            }
+        }
+
+        start_index += 1
+    };
+
+    if found_list {
+        Some(contiguous_list)
+    } else {
+        None
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let path = &args[1];
@@ -77,8 +124,13 @@ fn main() {
         .expect("Error reading file.");
     let input = split_input(&input);
 
-    let part_1 = find_invalid_number(&input, 25);
+    let part_1 = find_invalid_number(&input, 25).unwrap();
     println!("part 1: {:?}", part_1);
+
+    let contiguous_list = find_contiguous_numbers_that_sum_to(part_1, &input).unwrap();
+    let (smallest, largest) = find_smallest_and_large_number(&contiguous_list).unwrap();
+    let part_2 = smallest + largest;
+    println!("part 2: {:?}", part_2);
 }
 
 #[test]
@@ -115,4 +167,34 @@ fn test_find_invalid_number() {
     assert_eq!(find_invalid_number(&vec![1, 2, 3, 4], 2), Some(4));
     assert_eq!(find_invalid_number(&vec![1, 2, 3, 4, 5], 2), Some(4));
     assert_eq!(find_invalid_number(&vec![35, 20, 15, 25, 47, 40, 62, 55, 65, 95, 102, 117, 150, 182, 127, 219, 299, 277, 309, 576], 5), Some(127));
+}
+
+#[test]
+fn test_find_smallest_and_large_number() {
+    assert_eq!(find_smallest_and_large_number(&vec![]), None);
+    assert_eq!(find_smallest_and_large_number(&vec![1]), None);
+    assert_eq!(find_smallest_and_large_number(&vec![1, 1]), Some((1, 1)));
+    assert_eq!(find_smallest_and_large_number(&vec![1, 2]), Some((1, 2)));
+    assert_eq!(find_smallest_and_large_number(&vec![2, 1]), Some((1, 2)));
+    assert_eq!(find_smallest_and_large_number(&vec![1, 2, 3]), Some((1, 3)));
+    assert_eq!(find_smallest_and_large_number(&vec![1, 3, 2]), Some((1, 3)));
+    assert_eq!(find_smallest_and_large_number(&vec![2, 1, 3]), Some((1, 3)));
+    assert_eq!(find_smallest_and_large_number(&vec![2, 3, 1]), Some((1, 3)));
+    assert_eq!(find_smallest_and_large_number(&vec![3, 1, 2]), Some((1, 3)));
+    assert_eq!(find_smallest_and_large_number(&vec![3, 2, 1]), Some((1, 3)));
+}
+
+#[test]
+fn test_find_contiguous_numbers_that_sum_to() {
+    assert_eq!(find_contiguous_numbers_that_sum_to(0, &vec![]), None);
+    assert_eq!(find_contiguous_numbers_that_sum_to(0, &vec![1]), None);
+    assert_eq!(find_contiguous_numbers_that_sum_to(0, &vec![1, 2]), None);
+    assert_eq!(find_contiguous_numbers_that_sum_to(1, &vec![1]), None);
+    assert_eq!(find_contiguous_numbers_that_sum_to(2, &vec![1, 2, 1]), None);
+    assert_eq!(find_contiguous_numbers_that_sum_to(2, &vec![1, 1]), Some(vec![1, 1]));
+    assert_eq!(find_contiguous_numbers_that_sum_to(2, &vec![0, 1, 1]), Some(vec![0, 1, 1]));
+    assert_eq!(find_contiguous_numbers_that_sum_to(2, &vec![0, 1, 1, 0]), Some(vec![0, 1, 1]));
+    assert_eq!(find_contiguous_numbers_that_sum_to(2, &vec![2, 1, 1]), Some(vec![1, 1]));
+    assert_eq!(find_contiguous_numbers_that_sum_to(2, &vec![2, 1, 1, 2]), Some(vec![1, 1]));
+    assert_eq!(find_contiguous_numbers_that_sum_to(4, &vec![1, 1, 2]), Some(vec![1, 1, 2]));
 }
