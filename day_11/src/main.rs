@@ -113,6 +113,36 @@ fn update_seats(fields_to_update: &Vec<(usize, usize)>, map: &mut Vec<Vec<char>>
     }
 }
 
+fn find_and_update(map: &Vec<Vec<char>>) -> Vec<Vec<char>> {
+    let mut mutable_map: Vec<Vec<char>> = map.clone();
+    let mut indices_to_update: Vec<(usize, usize)> = Vec::new();
+    let mut did_map_mutate: bool = true;
+    for y in 0..map.len() {
+        for x in 0..map[0].len() {
+            if should_convert(x, y, &map) {
+                indices_to_update.push((x, y));
+                did_map_mutate = true;
+            }
+        }
+    }
+    update_seats(&indices_to_update, &mut mutable_map);
+    while did_map_mutate {
+        let mut new_indices_to_update: Vec<(usize, usize)> = Vec::new();
+        did_map_mutate = false;
+
+        for (x, y) in indices_to_update {
+            if should_convert(x, y, &mutable_map) {
+                new_indices_to_update.push((x, y));
+                did_map_mutate = true;
+            }
+        }
+        update_seats(&new_indices_to_update, &mut mutable_map);
+        indices_to_update = new_indices_to_update;
+    }
+
+    mutable_map
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let path = &args[1];
@@ -338,36 +368,6 @@ fn test_update_seats() {
     let indices = vec![(1, 0), (0, 1), (1, 1), (2, 1), (1, 2)];
     update_seats(&indices, &mut test_map);
     assert_eq!(test_map, final_map);
-}
-
-fn find_and_update(map: &Vec<Vec<char>>) -> Vec<Vec<char>> {
-    let mut mutable_map: Vec<Vec<char>> = map.clone();
-    let mut indices_to_update: Vec<(usize, usize)> = Vec::new();
-    let mut did_map_mutate: bool = true;
-    for y in 0..map.len() {
-        for x in 0..map[0].len() {
-            if should_convert(x, y, &map) {
-                indices_to_update.push((x, y));
-                did_map_mutate = true;
-            }
-        }
-    }
-    update_seats(&indices_to_update, &mut mutable_map);
-    while did_map_mutate {
-        let mut new_indices_to_update: Vec<(usize, usize)> = Vec::new();
-        did_map_mutate = false;
-
-        for (x, y) in indices_to_update {
-            if should_convert(x, y, &mutable_map) {
-                new_indices_to_update.push((x, y));
-                did_map_mutate = true;
-            }
-        }
-        update_seats(&new_indices_to_update, &mut mutable_map);
-        indices_to_update = new_indices_to_update;
-    }
-
-    mutable_map
 }
 
 #[test]
