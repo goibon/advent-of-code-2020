@@ -102,6 +102,123 @@ fn should_convert(center_x: usize, center_y: usize, map: &Vec<Vec<char>>) -> boo
     }
 }
 
+fn is_change_valid(
+    center_x: usize,
+    center_y: usize,
+    change_x: i8,
+    change_y: i8,
+    map: &Vec<Vec<char>>,
+) -> bool {
+    if map.is_empty() {
+        return false;
+    }
+
+    if (change_x == 0 && change_y == 0)
+        || (change_y == -1 && center_y == 0)
+        || (change_y == 1 && center_y == map.len() - 1)
+        || (change_x == -1 && center_x == 0)
+        || (change_x == 1 && center_x == map[center_y].len() - 1)
+    {
+        false
+    } else {
+        true
+    }
+}
+
+fn find_first_in_direction(
+    center_x: usize,
+    center_y: usize,
+    change_x: i8,
+    change_y: i8,
+    map: &Vec<Vec<char>>,
+) -> Option<char> {
+    if map.is_empty() || !is_change_valid(center_x, center_y, change_x, change_y, &map) {
+        return None;
+    }
+
+    let mut found_char = FLOOR_CHARACTER;
+    let mut previous_x = center_x;
+    let mut previous_y = center_y;
+
+    while found_char == FLOOR_CHARACTER
+        && is_change_valid(previous_x, previous_y, change_x, change_y, &map)
+    {
+        let new_x = match change_x {
+            1 => previous_x + 1,
+            -1 => previous_x - 1,
+            0 => previous_x,
+            _ => {
+                println!("invalid change");
+                0
+            }
+        };
+        let new_y = match change_y {
+            1 => previous_y + 1,
+            -1 => previous_y - 1,
+            0 => previous_y,
+            _ => {
+                println!("invalid change");
+                0
+            }
+        };
+
+        found_char = map[new_y][new_x];
+        previous_x = new_x;
+        previous_y = new_y;
+        if found_char != FLOOR_CHARACTER {
+            return Some(found_char);
+        }
+    }
+    None
+}
+
+const ALL_DIRECTIONS: &'static [(i8, i8)] = &[
+    (-1, -1),
+    (0, -1),
+    (1, -1),
+    (-1, 0),
+    (0, 0),
+    (1, 0),
+    (-1, 1),
+    (0, 1),
+    (1, 1),
+];
+
+fn should_convert_part_2(center_x: usize, center_y: usize, map: &Vec<Vec<char>>) -> bool {
+    if map.is_empty() || center_y >= map.len() || center_x >= map[center_y].len() {
+        return false;
+    }
+
+    let center_char = map[center_y][center_x];
+    if center_char == FLOOR_CHARACTER {
+        return false;
+    }
+
+    if center_char == EMPTY_SEAT_CHARACTER {
+        for (x, y) in ALL_DIRECTIONS {
+            if let Some(seat) = find_first_in_direction(center_x, center_y, *x, *y, &map) {
+                if seat == OCCUPIED_SEAT_CHARACTER {
+                    return false;
+                }
+            }
+        }
+        true
+    } else {
+        let mut occupied_seat_count = 0;
+        for (x, y) in ALL_DIRECTIONS {
+            if let Some(seat) = find_first_in_direction(center_x, center_y, *x, *y, &map) {
+                if seat == OCCUPIED_SEAT_CHARACTER {
+                    occupied_seat_count += 1;
+                }
+                if occupied_seat_count >= 5 {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+}
+
 fn update_seats(fields_to_update: &Vec<(usize, usize)>, map: &mut Vec<Vec<char>>) {
     for (x, y) in fields_to_update {
         let character = map[*y][*x];
@@ -143,27 +260,58 @@ fn find_and_update(map: &Vec<Vec<char>>) -> Vec<Vec<char>> {
     mutable_map
 }
 
+fn find_and_update_part_2(map: &Vec<Vec<char>>) -> Vec<Vec<char>> {
+    let mut mutable_map: Vec<Vec<char>> = map.clone();
+    let mut indices_to_update = find_all_seats_of_type(EMPTY_SEAT_CHARACTER, &mutable_map);
+    let mut did_map_mutate = true;
+
+    update_seats(&indices_to_update, &mut mutable_map);
+    while did_map_mutate {
+        let mut new_indices_to_update: Vec<(usize, usize)> = Vec::new();
+        did_map_mutate = false;
+
+        for (x, y) in indices_to_update {
+            if should_convert_part_2(x, y, &mutable_map) {
+                new_indices_to_update.push((x, y));
+                did_map_mutate = true;
+            }
+        }
+        update_seats(&new_indices_to_update, &mut mutable_map);
+        indices_to_update = new_indices_to_update;
+    }
+
+    mutable_map
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let path = &args[1];
 
     let input = read_file(path).expect("Error reading file.");
     let input = split_input(&input);
-    let result = find_and_update(&input);
-    let result = count_seats_of_type(&OCCUPIED_SEAT_CHARACTER, &result);
-    println!("{:?}", result);
+    let part_1 = find_and_update(&input);
+    let part_1 = count_seats_of_type(OCCUPIED_SEAT_CHARACTER, &part_1);
+    println!("Part 1: {:?}", part_1);
+
+    let part_2 = find_and_update_part_2(&input);
+    let part_2 = count_seats_of_type(OCCUPIED_SEAT_CHARACTER, &part_2);
+    println!("Part 2: {:?}", part_2);
 }
 
-fn count_seats_of_type(seat_type: &char, map: &Vec<Vec<char>>) -> u32 {
-    let mut count = 0;
-    for row in map {
-        for character in row {
-            if character == seat_type {
-                count += 1;
+fn find_all_seats_of_type(seat_type: char, map: &Vec<Vec<char>>) -> Vec<(usize, usize)> {
+    let mut seats: Vec<(usize, usize)> = Vec::new();
+    for y in 0..map.len() {
+        for x in 0..map[y].len() {
+            if map[y][x] == seat_type {
+                seats.push((x, y));
             }
         }
     }
-    count
+    seats
+}
+
+fn count_seats_of_type(seat_type: char, map: &Vec<Vec<char>>) -> u32 {
+    find_all_seats_of_type(seat_type, map).len() as u32
 }
 
 #[test]
@@ -189,33 +337,30 @@ fn test_count_seats_of_type() {
         vec!['L', 'L', '#'],
     ];
 
-    assert_eq!(count_seats_of_type(&FLOOR_CHARACTER, &floor_map), 9);
-    assert_eq!(count_seats_of_type(&FLOOR_CHARACTER, &empty_seats_map), 0);
+    assert_eq!(count_seats_of_type(FLOOR_CHARACTER, &floor_map), 9);
+    assert_eq!(count_seats_of_type(FLOOR_CHARACTER, &empty_seats_map), 0);
+    assert_eq!(count_seats_of_type(FLOOR_CHARACTER, &occupied_seats_map), 0);
+    assert_eq!(count_seats_of_type(FLOOR_CHARACTER, &mix_map), 3);
+    assert_eq!(count_seats_of_type(EMPTY_SEAT_CHARACTER, &floor_map), 0);
     assert_eq!(
-        count_seats_of_type(&FLOOR_CHARACTER, &occupied_seats_map),
-        0
-    );
-    assert_eq!(count_seats_of_type(&FLOOR_CHARACTER, &mix_map), 3);
-    assert_eq!(count_seats_of_type(&EMPTY_SEAT_CHARACTER, &floor_map), 0);
-    assert_eq!(
-        count_seats_of_type(&EMPTY_SEAT_CHARACTER, &empty_seats_map),
+        count_seats_of_type(EMPTY_SEAT_CHARACTER, &empty_seats_map),
         9
     );
     assert_eq!(
-        count_seats_of_type(&EMPTY_SEAT_CHARACTER, &occupied_seats_map),
+        count_seats_of_type(EMPTY_SEAT_CHARACTER, &occupied_seats_map),
         0
     );
-    assert_eq!(count_seats_of_type(&EMPTY_SEAT_CHARACTER, &mix_map), 5);
-    assert_eq!(count_seats_of_type(&OCCUPIED_SEAT_CHARACTER, &floor_map), 0);
+    assert_eq!(count_seats_of_type(EMPTY_SEAT_CHARACTER, &mix_map), 5);
+    assert_eq!(count_seats_of_type(OCCUPIED_SEAT_CHARACTER, &floor_map), 0);
     assert_eq!(
-        count_seats_of_type(&OCCUPIED_SEAT_CHARACTER, &empty_seats_map),
+        count_seats_of_type(OCCUPIED_SEAT_CHARACTER, &empty_seats_map),
         0
     );
     assert_eq!(
-        count_seats_of_type(&OCCUPIED_SEAT_CHARACTER, &occupied_seats_map),
+        count_seats_of_type(OCCUPIED_SEAT_CHARACTER, &occupied_seats_map),
         9
     );
-    assert_eq!(count_seats_of_type(&OCCUPIED_SEAT_CHARACTER, &mix_map), 1);
+    assert_eq!(count_seats_of_type(OCCUPIED_SEAT_CHARACTER, &mix_map), 1);
 }
 
 #[test]
@@ -330,6 +475,139 @@ fn test_should_convert() {
 }
 
 #[test]
+fn test_is_change_valid() {
+    let test_map = vec![
+        vec!['.', '.', '.'],
+        vec!['.', '.', '.'],
+        vec!['.', '.', '.'],
+    ];
+
+    assert!(!is_change_valid(0, 0, 0, 0, &test_map));
+    assert!(!is_change_valid(2, 0, 0, 0, &test_map));
+    assert!(!is_change_valid(1, 1, 0, 0, &test_map));
+    assert!(!is_change_valid(0, 2, 0, 0, &test_map));
+    assert!(!is_change_valid(2, 2, 0, 0, &test_map));
+
+    assert!(!is_change_valid(0, 0, -1, -1, &test_map));
+    assert!(!is_change_valid(1, 0, -1, -1, &test_map));
+    assert!(!is_change_valid(2, 0, -1, -1, &test_map));
+    assert!(!is_change_valid(0, 1, -1, -1, &test_map));
+    assert!(is_change_valid(1, 1, -1, -1, &test_map));
+    assert!(is_change_valid(2, 1, -1, -1, &test_map));
+    assert!(!is_change_valid(0, 2, -1, -1, &test_map));
+    assert!(is_change_valid(1, 2, -1, -1, &test_map));
+    assert!(is_change_valid(2, 2, -1, -1, &test_map));
+
+    assert!(is_change_valid(0, 0, 1, 1, &test_map));
+    assert!(is_change_valid(1, 0, 1, 1, &test_map));
+    assert!(!is_change_valid(2, 0, 1, 1, &test_map));
+    assert!(is_change_valid(0, 1, 1, 1, &test_map));
+    assert!(is_change_valid(1, 1, 1, 1, &test_map));
+    assert!(!is_change_valid(2, 1, 1, 1, &test_map));
+    assert!(!is_change_valid(0, 2, 1, 1, &test_map));
+    assert!(!is_change_valid(1, 2, 1, 1, &test_map));
+    assert!(!is_change_valid(2, 2, 1, 1, &test_map));
+}
+
+#[test]
+fn test_find_first_in_direction() {
+    let floor_map = vec![
+        vec!['.', '.', '.'],
+        vec!['.', '.', '.'],
+        vec!['.', '.', '.'],
+    ];
+    let mix_map = vec![
+        vec!['.', 'L', '.'],
+        vec!['.', 'L', 'L'],
+        vec!['L', 'L', '#'],
+    ];
+
+    let discover_all_occupied_map = vec![
+        vec!['.', '.', '.', '.', '.', '.', '.', '#', '.'],
+        vec!['.', '.', '.', '#', '.', '.', '.', '.', '.'],
+        vec!['.', '#', '.', '.', '.', '.', '.', '.', '.'],
+        vec!['.', '.', '.', '.', '.', '.', '.', '.', '.'],
+        vec!['.', '.', '#', 'L', '.', '.', '.', '.', '#'],
+        vec!['.', '.', '.', '.', '#', '.', '.', '.', '.'],
+        vec!['.', '.', '.', '.', '.', '.', '.', '.', '.'],
+        vec!['#', '.', '.', '.', '.', '.', '.', '.', '.'],
+        vec!['.', '.', '.', '#', '.', '.', '.', '.', '.'],
+    ];
+
+    assert_eq!(find_first_in_direction(0, 0, -1, -1, &floor_map), None);
+    assert_eq!(find_first_in_direction(0, 0, 0, -1, &floor_map), None);
+    assert_eq!(find_first_in_direction(0, 0, 1, -1, &floor_map), None);
+    assert_eq!(find_first_in_direction(0, 0, -1, 0, &floor_map), None);
+    assert_eq!(find_first_in_direction(0, 0, 0, 0, &floor_map), None);
+    assert_eq!(find_first_in_direction(0, 0, 1, 0, &floor_map), None);
+    assert_eq!(find_first_in_direction(0, 0, -1, 1, &floor_map), None);
+    assert_eq!(find_first_in_direction(0, 0, 0, 1, &floor_map), None);
+    assert_eq!(find_first_in_direction(0, 0, 1, 1, &floor_map), None);
+
+    assert_eq!(find_first_in_direction(1, 1, -1, -1, &mix_map), None);
+    assert_eq!(
+        find_first_in_direction(1, 1, 0, -1, &mix_map),
+        Some(EMPTY_SEAT_CHARACTER)
+    );
+    assert_eq!(find_first_in_direction(1, 1, 1, -1, &mix_map), None);
+    assert_eq!(find_first_in_direction(1, 1, -1, 0, &mix_map), None);
+    assert_eq!(find_first_in_direction(1, 1, 0, 0, &mix_map), None);
+    assert_eq!(
+        find_first_in_direction(1, 1, 1, 0, &mix_map),
+        Some(EMPTY_SEAT_CHARACTER)
+    );
+    assert_eq!(
+        find_first_in_direction(1, 1, -1, 1, &mix_map),
+        Some(EMPTY_SEAT_CHARACTER)
+    );
+    assert_eq!(
+        find_first_in_direction(1, 1, 0, 1, &mix_map),
+        Some(EMPTY_SEAT_CHARACTER)
+    );
+    assert_eq!(
+        find_first_in_direction(1, 1, 1, 1, &mix_map),
+        Some(OCCUPIED_SEAT_CHARACTER)
+    );
+
+    assert_eq!(
+        find_first_in_direction(3, 4, -1, -1, &discover_all_occupied_map),
+        Some(OCCUPIED_SEAT_CHARACTER)
+    );
+    assert_eq!(
+        find_first_in_direction(3, 4, 0, -1, &discover_all_occupied_map),
+        Some(OCCUPIED_SEAT_CHARACTER)
+    );
+    assert_eq!(
+        find_first_in_direction(3, 4, 1, -1, &discover_all_occupied_map),
+        Some(OCCUPIED_SEAT_CHARACTER)
+    );
+    assert_eq!(
+        find_first_in_direction(3, 4, -1, 0, &discover_all_occupied_map),
+        Some(OCCUPIED_SEAT_CHARACTER)
+    );
+    assert_eq!(
+        find_first_in_direction(3, 4, 0, 0, &discover_all_occupied_map),
+        None
+    );
+    assert_eq!(
+        find_first_in_direction(3, 4, 1, 0, &discover_all_occupied_map),
+        Some(OCCUPIED_SEAT_CHARACTER)
+    );
+    assert_eq!(
+        find_first_in_direction(3, 4, -1, 1, &discover_all_occupied_map),
+        Some(OCCUPIED_SEAT_CHARACTER)
+    );
+    assert_eq!(
+        find_first_in_direction(3, 4, 0, 1, &discover_all_occupied_map),
+        Some(OCCUPIED_SEAT_CHARACTER)
+    );
+    assert_eq!(
+        find_first_in_direction(3, 4, 1, 1, &discover_all_occupied_map),
+        Some(OCCUPIED_SEAT_CHARACTER)
+    );
+}
+
+#[test]
 fn test_update_seats() {
     let empty_seats_map = vec![
         vec!['L', 'L', 'L'],
@@ -415,4 +693,24 @@ fn test_find_and_update() {
             vec!['#', 'L', '#']
         ]
     );
+}
+
+#[test]
+fn test_find_and_update_part_2() {
+    let test_map = vec![
+        vec!['L', '.', 'L', 'L', '.', 'L', 'L', '.', 'L', 'L'],
+        vec!['L', 'L', 'L', 'L', 'L', 'L', 'L', '.', 'L', 'L'],
+        vec!['L', '.', 'L', '.', 'L', '.', '.', 'L', '.', '.'],
+        vec!['L', 'L', 'L', 'L', '.', 'L', 'L', '.', 'L', 'L'],
+        vec!['L', '.', 'L', 'L', '.', 'L', 'L', '.', 'L', 'L'],
+        vec!['L', '.', 'L', 'L', 'L', 'L', 'L', '.', 'L', 'L'],
+        vec!['.', '.', 'L', '.', 'L', '.', '.', '.', '.', '.'],
+        vec!['L', 'L', 'L', 'L', 'L', 'L', 'L', 'L', 'L', 'L'],
+        vec!['L', '.', 'L', 'L', 'L', 'L', 'L', 'L', '.', 'L'],
+        vec!['L', '.', 'L', 'L', 'L', 'L', 'L', '.', 'L', 'L'],
+    ];
+
+    let result_map = find_and_update_part_2(&test_map);
+    let result_count = count_seats_of_type(OCCUPIED_SEAT_CHARACTER, &result_map);
+    assert_eq!(result_count, 26);
 }
